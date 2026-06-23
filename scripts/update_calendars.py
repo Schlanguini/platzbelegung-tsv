@@ -12,6 +12,52 @@ FIELDS = {
     "S1": "Rasenplatz, Schönberg Platz 1, Jägerstr. 5, 22929 Schönberg"
 }
 
+BASE_URL = "https://www.fussball.de/verein/tsv-wentorf-sandesneben-schleswig-holstein/-/id/00ES8GN8JC00006CVV0AG08LVUPGND5I"
+
+def fetch_teams():
+    r = requests.get(BASE_URL, headers={"User-Agent": "Mozilla/5.0"})
+    soup = BeautifulSoup(r.text, "lxml")
+
+    links = soup.find_all("a")
+
+    team_urls = []
+
+    for a in links:
+        href = a.get("href", "")
+        if "/mannschaft/" in href:
+            team_urls.append("https://www.fussball.de" + href)
+
+    return list(set(team_urls))
+
+def fetch_matches_from_team(url):
+    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+    soup = BeautifulSoup(r.text, "lxml")
+
+    matches = []
+
+    rows = soup.find_all("tr")
+
+    for row in rows:
+        text = row.get_text(" ", strip=True)
+
+        if "gegen" in text:
+            matches.append(text)
+
+    return matches
+
+
+def main():
+    team_urls = fetch_teams()
+
+    all_matches = []
+
+    for url in team_urls:
+        all_matches.extend(fetch_matches_from_team(url))
+
+    calendars = build_calendars(all_matches)
+    save(calendars)
+
+
 import re
 
 def parse_team(team_text: str):
@@ -70,31 +116,6 @@ def get_category(team_text: str):
     return "Sonstiges", "gray"
 
 
-def get_html():
-    r = requests.get(BASE_URL, headers={"User-Agent": "Mozilla/5.0"})
-    r.raise_for_status()
-    return r.text
-
-
-def parse_matches(html):
-    soup = BeautifulSoup(html, "lxml")
-
-    matches = []
-
-    # FUSSBALL.DE Struktur: viele Links + Tabellenzeilen
-    rows = soup.find_all(text=re.compile("gegen|:"))
-
-    for row in rows:
-        text = row.strip()
-
-        if "gegen" not in text:
-            continue
-
-        matches.append(text)
-
-    return matches
-
-
 def get_duration(team_text):
     t = team_text.lower()
 
@@ -140,7 +161,7 @@ def build_calendars(matches):
     start = now - timedelta(days=730)
     end = now + timedelta(days=730)
 
-    for m in matches:
+    for m in all_matches:
         field = classify_field(m)
         if not field:
             continue
@@ -190,8 +211,11 @@ def save(calendars):
 
 
 def main():
-    html = get_html()
-    matches = parse_matches(html)
+    all_matches = []
+
+for team_id in TEAM_IDS:
+    data = fetch_team_matches(team_id)
+    all_matches.extend(data)
     calendars = build_calendars(matches)
     save(calendars)
 
