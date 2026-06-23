@@ -12,6 +12,21 @@ FIELDS = {
     "S1": "Rasenplatz, Schönberg Platz 1, Jägerstr. 5, 22929 Schönberg"
 }
 
+def get_category(team_text: str):
+    t = team_text.lower()
+
+    if "herr" in t:
+        return "Herren", "blue"
+
+    if "ü40" in t or "ü50" in t or "alten" in t:
+        return "Altherren", "orange"
+
+    if any(x in t for x in ["g-", "f-", "e-", "d-", "c-", "b-", "a-"]):
+        return "Jugend", "green"
+
+    return "Sonstiges", "gray"
+
+
 def get_html():
     r = requests.get(BASE_URL, headers={"User-Agent": "Mozilla/5.0"})
     r.raise_for_status()
@@ -94,11 +109,21 @@ def build_calendars(matches):
 
         title = f"{m}"
 
+        team_type, color = get_category(m)
+
         e = Event()
-        e.name = title
+        e.name = f"({team_type}) {title}"
         e.begin = match_time
         e.duration = timedelta(minutes=duration)
-        e.description = m
+
+        # Outlook Kategorie (wichtig für Farben)
+        e.categories = [team_type]
+        e.description = f"""
+        Kategorie: {team_type}
+        Anstoß: {match_time}
+        Spiel: {title}
+        Quelle: FUSSBALL.DE
+        """
 
         calendars[field].events.add(e)
 
