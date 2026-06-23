@@ -184,12 +184,29 @@ def main():
 
     team_urls = fetch_teams()
 
+    print("TEAM URLs gefunden:", len(team_urls))
+
     all_matches = []
 
     for url in team_urls:
-        all_matches.extend(fetch_matches_from_team(url))
+        matches = fetch_matches_from_team(url)
+
+        print("URL:", url)
+        print("Matches gefunden:", len(matches))
+
+        all_matches.extend(matches)
+
+    print("GESAMT MATCHES:", len(all_matches))
+
+    if len(all_matches) == 0:
+        print("⚠️ KEINE SPIELE GEFUNDEN - DATENQUELLE LIEFERT LEEREN OUTPUT")
+        return
 
     calendars = build_calendars(all_matches)
+
+    total_events = sum(len(cal.events) for cal in calendars.values())
+    print("CALENDAR EVENTS:", total_events)
+
     save(calendars)
 
 
