@@ -17,38 +17,46 @@ FIELDS = {
 # TEAMS
 # -----------------------------
 def fetch_teams():
-    r = requests.get(BASE_URL, headers={"User-Agent": "Mozilla/5.0"})
+    url = BASE_URL
+    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
     soup = BeautifulSoup(r.text, "lxml")
 
-    team_urls = []
+    teams = []
 
-    for a in soup.find_all("a"):
+    for a in soup.select("a"):
         href = a.get("href", "")
 
-        if "/mannschaft/" in href:
-            team_urls.append(urljoin("https://www.fussball.de", href))
+        if "mannschaft" in href:
+            if href.startswith("http"):
+                teams.append(href)
+            else:
+                teams.append(urljoin("https://www.fussball.de", href))
 
-    return list(set(team_urls))
+    return list(set(teams))
 
 
 # -----------------------------
 # SPIELE
 # -----------------------------
-def fetch_matches_from_team(url):
+def fetch_matches_from_team(team_url):
 
-    if not url or not url.startswith("http"):
-        return []
-
-    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+    r = requests.get(team_url, headers={"User-Agent": "Mozilla/5.0"})
     soup = BeautifulSoup(r.text, "lxml")
 
     matches = []
 
-    for row in soup.find_all("tr"):
-        text = row.get_text(" ", strip=True)
+    # Suche nach eingebetteten JSON Daten
+    scripts = soup.find_all("script")
 
-        if "gegen" in text:
-            matches.append(text)
+    for s in scripts:
+        if s.string and "match" in s.string.lower():
+
+            text = s.string
+
+            # sehr grobe Extraktion (Fallback)
+            for line in text.split("}"):
+                if "gegen" in line or "vs" in line:
+                    matches.append(line)
 
     return matches
 
