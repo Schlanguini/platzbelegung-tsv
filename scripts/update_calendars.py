@@ -12,6 +12,49 @@ FIELDS = {
     "S1": "Rasenplatz, Schönberg Platz 1, Jägerstr. 5, 22929 Schönberg"
 }
 
+import re
+
+def parse_team(team_text: str):
+    t = team_text.lower()
+
+    # Altersklasse erkennen
+    age = None
+    if "g" in t and "jun" in t:
+        age = "G"
+    elif "f" in t:
+        age = "F"
+    elif "e" in t:
+        age = "E"
+    elif "d" in t:
+        age = "D"
+    elif "c" in t:
+        age = "C"
+    elif "b" in t:
+        age = "B"
+    elif "a" in t:
+        age = "A"
+    elif "herr" in t:
+        age = "Herren"
+    elif "ü40" in t:
+        age = "Ü40"
+    elif "ü50" in t:
+        age = "Ü50"
+    elif "alt" in t:
+        age = "Altherren"
+
+    # Teamnummer erkennen (1, 2, II, III etc.)
+    match = re.search(r"(?:\s|^)(\d+|ii|iii|iv|v)(?:\s|$)", t)
+    team_nr = match.group(1).upper() if match else ""
+
+    if age in ["Herren", "Ü40", "Ü50", "Altherren"]:
+        return age
+
+    if team_nr:
+        return f"{age}{team_nr}"
+    else:
+        return f"{age}"
+
+
 def get_category(team_text: str):
     t = team_text.lower()
 
@@ -107,7 +150,9 @@ def build_calendars(matches):
 
         duration = get_duration(m)
 
-        title = f"{m}"
+        team_name = parse_team(m)
+
+        title = f"({team_name}) {m}"
 
         team_type, color = get_category(m)
 
