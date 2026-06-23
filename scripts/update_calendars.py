@@ -36,43 +36,29 @@ def fetch_teams():
 # -----------------------------
 # SPIELE
 # -----------------------------
-def fetch_matches_from_team(url):
+def fetch_matches_from_team(team_url):
 
-    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-    soup = BeautifulSoup(r.text, "lxml")
+    # Team-ID aus URL extrahieren
+    team_id = team_url.split("team-id/")[-1] if "team-id/" in team_url else None
 
-    matches = []
+    if not team_id:
+        return []
 
-    for s in soup.find_all("script"):
-        if not s.string:
-            continue
+    api_url = f"https://www.fussball.de/ajax.teamFixtures/{team_id}"
 
-        text = s.string
+    try:
+        r = requests.get(api_url, headers={"User-Agent": "Mozilla/5.0"})
+        data = r.json()
 
-        # breiter suchen (FUSSBALL.DE nutzt verschiedene Keys)
-        if any(x in text.lower() for x in ["home", "away", "match", "spiel"]):
+        matches = []
 
-            # JSON-Blöcke extrahieren (vorsichtiger als vorher)
-            blocks = re.findall(r'\{[^{}]*\}', text)
+        for m in data.get("matches", []):
+            matches.append(m)
 
-            for b in blocks:
-                try:
-                    data = json.loads(b)
+        return matches
 
-                    if isinstance(data, dict):
-
-                        # nur echte Spiele behalten
-                        if (
-                            "homeTeam" in data
-                            or "home" in data
-                        ):
-                            matches.append(data)
-
-                except:
-                    continue
-
-    return matches
-
+    except:
+        return []
 
 # -----------------------------
 # HOME FILTER (robust)
