@@ -14,12 +14,12 @@ FIELDS = {
     "S1": "Rasenplatz, Schönberg Platz 1, Jägerstr. 5, 22929 Schönberg"
 }
 
+
 # -----------------------------
 # TEAMS
 # -----------------------------
 def fetch_teams():
-    url = BASE_URL
-    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+    r = requests.get(BASE_URL, headers={"User-Agent": "Mozilla/5.0"})
     soup = BeautifulSoup(r.text, "lxml")
 
     teams = []
@@ -28,10 +28,7 @@ def fetch_teams():
         href = a.get("href", "")
 
         if "mannschaft" in href:
-            if href.startswith("http"):
-                teams.append(href)
-            else:
-                teams.append(urljoin("https://www.fussball.de", href))
+            teams.append(urljoin("https://www.fussball.de", href))
 
     return list(set(teams))
 
@@ -46,27 +43,29 @@ def fetch_matches_from_team(url):
 
     matches = []
 
-    scripts = soup.find_all("script")
-
-    for s in scripts:
+    for s in soup.find_all("script"):
         if not s.string:
             continue
 
         text = s.string
 
-        # typische FUSSBALL.DE Daten enthalten JSON Blöcke
-        if "match" in text.lower() or "spiel" in text.lower():
+        # breiter suchen (FUSSBALL.DE nutzt verschiedene Keys)
+        if any(x in text.lower() for x in ["home", "away", "match", "spiel"]):
 
-            # versuche JSON-Blöcke zu finden
-            json_blocks = re.findall(r'\{.*?\}', text)
+            # JSON-Blöcke extrahieren (vorsichtiger als vorher)
+            blocks = re.findall(r'\{[^{}]*\}', text)
 
-            for block in json_blocks:
+            for b in blocks:
                 try:
-                    data = json.loads(block)
+                    data = json.loads(b)
 
-                    # nur wenn es ein Spiel ist
                     if isinstance(data, dict):
-                        if "homeTeam" in data or "home" in data:
+
+                        # nur echte Spiele behalten
+                        if (
+                            "homeTeam" in data
+                            or "home" in data
+                        ):
                             matches.append(data)
 
                 except:
@@ -75,82 +74,53 @@ def fetch_matches_from_team(url):
     return matches
 
 
+# -----------------------------
+# HOME FILTER (robust)
+# -----------------------------
 def is_home_match(match):
+
     try:
-        home = match.get("homeTeam", {}).get("name", "")
-        return "wentorf" in home.lower()
+        home = (
+            match.get("homeTeam", {}).get("name")
+            or match.get("home", {}).get("name")
+            or ""
+        ).lower()
+
+        # robust statt nur "wentorf"
+        return any(x in home for x in ["wentorf", "sg wentorf", "sandesneben"])
+
     except:
         return False
 
+
 # -----------------------------
-# TEAM NAME
+# DATUM PARSEN
 # -----------------------------
-def parse_team(text):
-    t = text.lower()
+def parse_date(match):
 
-    match = re.search(r"(g|f|e|d|c|b|a)[-\s]?(\d+|ii|iii|iv)?", t)
+    raw = match.get("matchDate") or match.get("date") or ""
 
-    if match:
-        base = match.group(1).upper()
-        nr = match.group(2)
+    if not raw:
+        return None
 
-        if nr:
-            nr = nr.replace("ii", "2").replace("iii", "3").replace("iv", "4")
-            return f"{base}{nr}"
-        return base
-
-    if "herr" in t:
-        return "Herren"
-
-    if "ü40" in t:
-        return "Ü40"
-
-    if "ü50" in t:
-        return "Ü50"
-
-    return "Team"
+    try:
+        return datetime.fromisoformat(raw.replace("Z", ""))
+    except:
+        return None
 
 
 # -----------------------------
 # PLATZ
 # -----------------------------
 def classify_field(text):
+
     t = text.lower()
 
     if "schönberg" in t:
         return "S1"
     if "platz 2" in t:
         return "R1"
-    if "kunstrasen" in t:
-        return "KR"
-
     return "KR"
-
-
-# -----------------------------
-# DAUER
-# -----------------------------
-def get_duration(text):
-    t = text.lower()
-
-    if "g-" in t:
-        return 180
-    if "f-" in t:
-        return 50
-    if "e-" in t:
-        return 60
-    if "d-" in t:
-        return 70
-    if "c-" in t:
-        return 85
-    if "b-" in t:
-        return 95
-    if "a-" in t:
-        return 105
-    if "herr" in t:
-        return 105
-
-    return 90
 
 
 # -----------------------------
@@ -164,31 +134,29 @@ def build_calendars(matches):
         "S1": Calendar()
     }
 
-    now = datetime.now()
-
     for m in matches:
 
         if not is_home_match(m):
             continue
 
         try:
-            home = m.get("homeTeam", {}).get("name", "")
-            away = m.get("awayTeam", {}).get("name", "")
-            date_str = m.get("matchDate") or m.get("date")
+            home = (
+                m.get("homeTeam", {}).get("name")
+                or m.get("home", {}).get("name")
+                or "Heimteam"
+            )
 
-            if not date_str:
+            away = (
+                m.get("awayTeam", {}).get("name")
+                or m.get("away", {}).get("name")
+                or "Gast"
+            )
+
+            match_time = parse_date(m)
+            if not match_time:
                 continue
 
-            match_time = datetime.fromisoformat(date_str.replace("Z", ""))
-
-            # Platzzuordnung (einfach & stabil)
-            field = "KR"
-            text = (home + " " + away).lower()
-
-            if "schönberg" in text:
-                field = "S1"
-            elif "platz 2" in text:
-                field = "R1"
+            field = classify_field(home + " " + away)
 
             e = Event()
             e.name = f"{home} - {away}"
@@ -209,6 +177,7 @@ def build_calendars(matches):
 # SAVE
 # -----------------------------
 def save(calendars):
+
     import os
     os.makedirs("output", exist_ok=True)
 
