@@ -106,9 +106,17 @@ def build_calendars(matches):
 
 
 def save(calendars):
-    calendars["KR"].serialize().write("output/wentorf_kunstrasen.ics")
-    calendars["R1"].serialize().write("output/wentorf_rasen.ics")
-    calendars["S1"].serialize().write("output/schoenberg_rasen.ics")
+    import os
+    os.makedirs("output", exist_ok=True)
+
+    with open("output/wentorf_kunstrasen.ics", "w", encoding="utf-8") as f:
+        f.write(calendars["KR"].serialize())
+
+    with open("output/wentorf_rasen.ics", "w", encoding="utf-8") as f:
+        f.write(calendars["R1"].serialize())
+
+    with open("output/schoenberg_rasen.ics", "w", encoding="utf-8") as f:
+        f.write(calendars["S1"].serialize())
 
 
 def main():
