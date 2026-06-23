@@ -20,7 +20,9 @@ def fetch_teams():
 
     links = soup.find_all("a")
 
-    team_urls = []
+    from urllib.parse import urljoin
+
+    team_urls.append(urljoin("https://www.fussball.de", href))
 
     for a in links:
         href = a.get("href", "")
@@ -30,6 +32,12 @@ def fetch_teams():
     return list(set(team_urls))
 
 def fetch_matches_from_team(url):
+   
+    # 🔒 SAFETY-FIX: kaputte URLs abfangen
+    if not url or not url.startswith("http"):
+        print("Ungültige URL übersprungen:", url)
+        return []
+    
     r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
     soup = BeautifulSoup(r.text, "lxml")
 
