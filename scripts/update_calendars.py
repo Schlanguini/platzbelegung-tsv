@@ -14,22 +14,31 @@ FIELDS = {
 
 BASE_URL = "https://www.fussball.de/verein/tsv-wentorf-sandesneben-schleswig-holstein/-/id/00ES8GN8JC00006CVV0AG08LVUPGND5I"
 
+
 def fetch_teams():
-    r = requests.get(BASE_URL, headers={"User-Agent": "Mozilla/5.0"})
+    from urllib.parse import urljoin
+    import requests
+    from bs4 import BeautifulSoup
+
+    def fetch_teams():
+    url = "https://www.fussball.de/verein/tsv-wentorf-sandesneben-schleswig-holstein/-/id/00ES8GN8JC00006CVV0AG08LVUPGND5I"
+
+    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
     soup = BeautifulSoup(r.text, "lxml")
+
+    team_urls = []  # ❗ WICHTIG: muss am Anfang stehen
 
     links = soup.find_all("a")
 
-    from urllib.parse import urljoin
-
-    team_urls.append(urljoin("https://www.fussball.de", href))
-
     for a in links:
         href = a.get("href", "")
+
         if "/mannschaft/" in href:
-            team_urls.append("https://www.fussball.de" + href)
+            full_url = urljoin("https://www.fussball.de", href)
+            team_urls.append(full_url)
 
     return list(set(team_urls))
+
 
 def fetch_matches_from_team(url):
    
