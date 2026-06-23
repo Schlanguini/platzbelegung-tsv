@@ -226,10 +226,11 @@ def save(calendars):
 def main():
     team_urls = fetch_teams()
 
-    all_matches = []
+    all_matches = []  # ❗ WICHTIG: muss hier existieren
 
     for url in team_urls:
-        all_matches.extend(fetch_matches_from_team(url))
+        matches = fetch_matches_from_team(url)
+        all_matches.extend(matches)
 
     calendars = build_calendars(all_matches)
     save(calendars)
