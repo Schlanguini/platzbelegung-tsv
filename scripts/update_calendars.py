@@ -16,17 +16,12 @@ BASE_URL = "https://www.fussball.de/verein/tsv-wentorf-sandesneben-schleswig-hol
 
 
 def fetch_teams():
-    from urllib.parse import urljoin
-    import requests
-    from bs4 import BeautifulSoup
-
-    def fetch_teams():
     url = "https://www.fussball.de/verein/tsv-wentorf-sandesneben-schleswig-holstein/-/id/00ES8GN8JC00006CVV0AG08LVUPGND5I"
 
     r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
     soup = BeautifulSoup(r.text, "lxml")
 
-    team_urls = []  # ❗ WICHTIG: muss am Anfang stehen
+    team_urls = []
 
     links = soup.find_all("a")
 
