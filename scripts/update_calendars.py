@@ -13,44 +13,38 @@ FIELDS = {
     "S1": "Rasenplatz, Schönberg Platz 1, Jägerstr. 5, 22929 Schönberg"
 }
 
-BASE_URL = "https://www.fussball.de/verein/tsv-wentorf-sandesneben-schleswig-holstein/-/id/00ES8GN8JC00006CVV0AG08LVUPGND5I"
-
-
+# -----------------------------
+# TEAMS
+# -----------------------------
 def fetch_teams():
-    url = "https://www.fussball.de/verein/tsv-wentorf-sandesneben-schleswig-holstein/-/id/00ES8GN8JC00006CVV0AG08LVUPGND5I"
-
-    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+    r = requests.get(BASE_URL, headers={"User-Agent": "Mozilla/5.0"})
     soup = BeautifulSoup(r.text, "lxml")
 
     team_urls = []
 
-    links = soup.find_all("a")
-
-    for a in links:
+    for a in soup.find_all("a"):
         href = a.get("href", "")
 
         if "/mannschaft/" in href:
-            full_url = urljoin("https://www.fussball.de", href)
-            team_urls.append(full_url)
+            team_urls.append(urljoin("https://www.fussball.de", href))
 
     return list(set(team_urls))
 
 
+# -----------------------------
+# SPIELE
+# -----------------------------
 def fetch_matches_from_team(url):
-   
-    # 🔒 SAFETY-FIX: kaputte URLs abfangen
+
     if not url or not url.startswith("http"):
-        print("Ungültige URL übersprungen:", url)
         return []
-    
+
     r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
     soup = BeautifulSoup(r.text, "lxml")
 
     matches = []
 
-    rows = soup.find_all("tr")
-
-    for row in rows:
+    for row in soup.find_all("tr"):
         text = row.get_text(" ", strip=True)
 
         if "gegen" in text:
@@ -59,80 +53,58 @@ def fetch_matches_from_team(url):
     return matches
 
 
-def main():
-    team_urls = fetch_teams()
+# -----------------------------
+# TEAM NAME
+# -----------------------------
+def parse_team(text):
+    t = text.lower()
 
-    all_matches = []
+    match = re.search(r"(g|f|e|d|c|b|a)[-\s]?(\d+|ii|iii|iv)?", t)
 
-    for url in team_urls:
-        all_matches.extend(fetch_matches_from_team(url))
+    if match:
+        base = match.group(1).upper()
+        nr = match.group(2)
 
-    calendars = build_calendars(all_matches)
-    save(calendars)
-
-
-import re
-
-def parse_team(team_text: str):
-    t = team_text.lower()
-
-    # Altersklasse erkennen
-    age = None
-    if "g" in t and "jun" in t:
-        age = "G"
-    elif "f" in t:
-        age = "F"
-    elif "e" in t:
-        age = "E"
-    elif "d" in t:
-        age = "D"
-    elif "c" in t:
-        age = "C"
-    elif "b" in t:
-        age = "B"
-    elif "a" in t:
-        age = "A"
-    elif "herr" in t:
-        age = "Herren"
-    elif "ü40" in t:
-        age = "Ü40"
-    elif "ü50" in t:
-        age = "Ü50"
-    elif "alt" in t:
-        age = "Altherren"
-
-    # Teamnummer erkennen (1, 2, II, III etc.)
-    match = re.search(r"(?:\s|^)(\d+|ii|iii|iv|v)(?:\s|$)", t)
-    team_nr = match.group(1).upper() if match else ""
-
-    if age in ["Herren", "Ü40", "Ü50", "Altherren"]:
-        return age
-
-    if team_nr:
-        return f"{age}{team_nr}"
-    else:
-        return f"{age}"
-
-
-def get_category(team_text: str):
-    t = team_text.lower()
+        if nr:
+            nr = nr.replace("ii", "2").replace("iii", "3").replace("iv", "4")
+            return f"{base}{nr}"
+        return base
 
     if "herr" in t:
-        return "Herren", "blue"
+        return "Herren"
 
-    if "ü40" in t or "ü50" in t or "alten" in t:
-        return "Altherren", "orange"
+    if "ü40" in t:
+        return "Ü40"
 
-    if any(x in t for x in ["g-", "f-", "e-", "d-", "c-", "b-", "a-"]):
-        return "Jugend", "green"
+    if "ü50" in t:
+        return "Ü50"
 
-    return "Sonstiges", "gray"
+    return "Team"
 
 
-def get_duration(team_text):
-    t = team_text.lower()
+# -----------------------------
+# PLATZ
+# -----------------------------
+def classify_field(text):
+    t = text.lower()
 
-    if "g-" in t or "g-junior" in t:
+    if "schönberg" in t:
+        return "S1"
+    if "platz 2" in t:
+        return "R1"
+    if "kunstrasen" in t:
+        return "KR"
+
+    return "KR"
+
+
+# -----------------------------
+# DAUER
+# -----------------------------
+def get_duration(text):
+    t = text.lower()
+
+    if "g-" in t:
         return 180
     if "f-" in t:
         return 50
@@ -148,67 +120,45 @@ def get_duration(team_text):
         return 105
     if "herr" in t:
         return 105
-    if "ü40" in t or "ü50" in t:
-        return 85
 
     return 90
 
 
-def classify_field(text):
-    t = text.lower()
-
-    if "kunstrasen" in t:
-        return "KR"
-    if "platz 2" in t:
-        return "R1"
-    if "schönberg" in t:
-        return "S1"
-
-    return None
-
-
+# -----------------------------
+# KALENDER
+# -----------------------------
 def build_calendars(matches):
-    calendars = {"KR": Calendar(), "R1": Calendar(), "S1": Calendar()}
+
+    calendars = {
+        "KR": Calendar(),
+        "R1": Calendar(),
+        "S1": Calendar()
+    }
 
     now = datetime.now()
-    start = now - timedelta(days=730)
-    end = now + timedelta(days=730)
 
-    for m in all_matches:
+    for m in matches:
+
         field = classify_field(m)
-        if not field:
-            continue
+        team = parse_team(m)
 
-        # Dummy Zeit (wird aus Detailseite später verbessert)
-        match_time = now + timedelta(days=1)
-
-        duration = get_duration(m)
-
-        team_name = parse_team(m)
-
-        title = f"({team_name}) {m}"
-
-        team_type, color = get_category(m)
+        start = now + timedelta(days=1)
 
         e = Event()
-        e.name = f"({team_type}) {title}"
-        e.begin = match_time
-        e.duration = timedelta(minutes=duration)
-
-        # Outlook Kategorie (wichtig für Farben)
-        e.categories = [team_type]
-        e.description = f"""
-        Kategorie: {team_type}
-        Anstoß: {match_time}
-        Spiel: {title}
-        Quelle: FUSSBALL.DE
-        """
+        e.name = f"({team}) {m}"
+        e.begin = start
+        e.duration = timedelta(minutes=get_duration(m))
+        e.categories = [team]
+        e.description = f"{m} | Quelle: FUSSBALL.DE"
 
         calendars[field].events.add(e)
 
     return calendars
 
 
+# -----------------------------
+# SAVE
+# -----------------------------
 def save(calendars):
     import os
     os.makedirs("output", exist_ok=True)
@@ -223,14 +173,17 @@ def save(calendars):
         f.write(calendars["S1"].serialize())
 
 
+# -----------------------------
+# MAIN
+# -----------------------------
 def main():
+
     team_urls = fetch_teams()
 
-    all_matches = []  # ❗ WICHTIG: muss hier existieren
+    all_matches = []
 
     for url in team_urls:
-        matches = fetch_matches_from_team(url)
-        all_matches.extend(matches)
+        all_matches.extend(fetch_matches_from_team(url))
 
     calendars = build_calendars(all_matches)
     save(calendars)
