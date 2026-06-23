@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from ics import Calendar, Event
 from urllib.parse import urljoin
+import json
 import re
 
 BASE_URL = "https://www.fussball.de/verein/tsv-wentorf-sandesneben-schleswig-holstein/-/id/00ES8GN8JC00006CVV0AG08LVUPGND5I"
@@ -38,28 +39,48 @@ def fetch_teams():
 # -----------------------------
 # SPIELE
 # -----------------------------
-def fetch_matches_from_team(team_url):
+def fetch_matches_from_team(url):
 
-    r = requests.get(team_url, headers={"User-Agent": "Mozilla/5.0"})
+    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
     soup = BeautifulSoup(r.text, "lxml")
 
     matches = []
 
-    # Suche nach eingebetteten JSON Daten
     scripts = soup.find_all("script")
 
     for s in scripts:
-        if s.string and "match" in s.string.lower():
+        if not s.string:
+            continue
 
-            text = s.string
+        text = s.string
 
-            # sehr grobe Extraktion (Fallback)
-            for line in text.split("}"):
-                if "gegen" in line or "vs" in line:
-                    matches.append(line)
+        # typische FUSSBALL.DE Daten enthalten JSON Blöcke
+        if "match" in text.lower() or "spiel" in text.lower():
+
+            # versuche JSON-Blöcke zu finden
+            json_blocks = re.findall(r'\{.*?\}', text)
+
+            for block in json_blocks:
+                try:
+                    data = json.loads(block)
+
+                    # nur wenn es ein Spiel ist
+                    if isinstance(data, dict):
+                        if "homeTeam" in data or "home" in data:
+                            matches.append(data)
+
+                except:
+                    continue
 
     return matches
 
+
+def is_home_match(match):
+    try:
+        home = match.get("homeTeam", {}).get("name", "")
+        return "wentorf" in home.lower()
+    except:
+        return False
 
 # -----------------------------
 # TEAM NAME
@@ -147,19 +168,39 @@ def build_calendars(matches):
 
     for m in matches:
 
-        field = classify_field(m)
-        team = parse_team(m)
+        if not is_home_match(m):
+            continue
 
-        start = now + timedelta(days=1)
+        try:
+            home = m.get("homeTeam", {}).get("name", "")
+            away = m.get("awayTeam", {}).get("name", "")
+            date_str = m.get("matchDate") or m.get("date")
 
-        e = Event()
-        e.name = f"({team}) {m}"
-        e.begin = start
-        e.duration = timedelta(minutes=get_duration(m))
-        e.categories = [team]
-        e.description = f"{m} | Quelle: FUSSBALL.DE"
+            if not date_str:
+                continue
 
-        calendars[field].events.add(e)
+            match_time = datetime.fromisoformat(date_str.replace("Z", ""))
+
+            # Platzzuordnung (einfach & stabil)
+            field = "KR"
+            text = (home + " " + away).lower()
+
+            if "schönberg" in text:
+                field = "S1"
+            elif "platz 2" in text:
+                field = "R1"
+
+            e = Event()
+            e.name = f"{home} - {away}"
+            e.begin = match_time
+            e.duration = timedelta(minutes=90)
+            e.categories = ["Heimspiel"]
+            e.description = "Heimspiel TSV Wentorf"
+
+            calendars[field].events.add(e)
+
+        except:
+            continue
 
     return calendars
 
