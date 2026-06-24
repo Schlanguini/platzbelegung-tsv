@@ -167,9 +167,25 @@ def build_calendars(events):
 
             e = Event()
 
-            e.name = str(
-                ev.get("SUMMARY", "Heimspiel")
-            )
+            # Mannschaftstyp (z. B. "D1-Junioren")
+            team = ev.team_name
+
+            # Heimverein (fix)
+            HOME_TEAM_NAME = "SGWSS"
+
+            # Gegner aus SUMMARY extrahieren
+            summary = str(ev.get("SUMMARY", ""))
+            # DFBnet-Format ist meist: "SGWSS - Gegner" oder "Heimteam - Auswärtsteam"
+            if "-" in summary:
+                parts = summary.split("-")
+                # Gegner ist der rechte Teil
+                opponent = parts[1].strip()
+            else:
+                opponent = summary  # Fallback
+
+            # Kalendertitel zusammensetzen
+            e.name = f"{team}, {HOME_TEAM_NAME} - {opponent}"
+
 
             e.begin = start
 
