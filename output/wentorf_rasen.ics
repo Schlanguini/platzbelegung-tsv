@@ -3,30 +3,30 @@ VERSION:2.0
 PRODID:ics.py - http://git.io/lLljaA
 BEGIN:VEVENT
 DURATION:PT2H
-LOCATION:Sportlerheim\,\nSparrbucht 4\, 23898 Wentorf A.S.
-DTSTART:20260621T090000Z
-SUMMARY:Sommerabschlussfeier D-Junioren
-UID:ecc73d13-c614-41b8-a309-36cdcaf29a36@ecc7.org
+LOCATION:Wentorf Platz 2\,\nSparrbucht 4\, 23898 Wentorf A.S.
+DTSTART:20250921T110000Z
+SUMMARY:SG Mölln/Breitenfelde III - SGWSS (C-Junioren)
+UID:01a373fb-56f4-4c27-abe9-3ea556f85587@01a3.org
 END:VEVENT
 BEGIN:VEVENT
 DURATION:PT2H
-LOCATION:Wentorf Platz 2\,\nSparrbucht 4\, 23898 Wentorf A.S.
-DTSTART:20260517T110000Z
-SUMMARY:SG Mölln/Breitenfelde III - SGWSS (C-Junioren)
-UID:1113ac05-0f76-4000-8279-6800f89d1b4a@1113.org
+LOCATION:Sportlerheim\,\nSparrbucht 4\, 23898 Wentorf A.S.
+DTSTART:20260621T090000Z
+SUMMARY:Sommerabschlussfeier D-Junioren
+UID:b4c9e1d3-56f1-439a-b09f-dc5903622a4f@b4c9.org
 END:VEVENT
 BEGIN:VEVENT
 DURATION:PT2H
 LOCATION:Sportlerheim\,\nSparrbucht 4\, 23898 Wentorf A.S.
 DTSTART:20260616T163000Z
 SUMMARY:Elternabend Saison 2026/2027 für den Jahrgang 2013
-UID:346a9d13-495d-4265-ab53-b39d281a4c8a@346a.org
+UID:274d417b-464d-4c29-b20e-34e694c96ed4@274d.org
 END:VEVENT
 BEGIN:VEVENT
 DURATION:PT2H
 LOCATION:Wentorf Platz 2\,\nSparrbucht 4\, 23898 Wentorf A.S.
-DTSTART:20250921T110000Z
+DTSTART:20260517T110000Z
 SUMMARY:SG Mölln/Breitenfelde III - SGWSS (C-Junioren)
-UID:29df7028-2b1a-401a-ac3a-8a336b446dee@29df.org
+UID:fd9d26a4-4dba-4330-9e13-ae6cae2b9237@fd9d.org
 END:VEVENT
 END:VCALENDAR
