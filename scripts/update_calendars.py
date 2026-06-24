@@ -15,6 +15,23 @@ FIELDS = {
 
 HOME_CLUB = "TSV Wentorf"
 
+# Spielzeiten pro Mannschaft (in Minuten)
+TEAM_DURATIONS = {
+    "G-Junioren": 180,  # feste 3h
+    "F-Junioren": 180,  # feste 3h
+
+    "E-Junioren": (2 * 25) + 10 + 15,  # 50 + 10 + 15 = 75 min
+    "D-Junioren": (2 * 30) + 10 + 15,  # 60 + 10 + 15 = 85 min
+    "C-Junioren": (2 * 35) + 15 + 15,  # 70 + 15 + 15 = 100 min
+    "B-Junioren": (2 * 40) + 15 + 15,  # 80 + 15 + 15 = 110 min
+    "A-Junioren": (2 * 45) + 15 + 15,  # 90 + 15 + 15 = 120 min
+
+    "Herren":     (2 * 45) + 15 + 15,  # 120 min
+
+    "Altherren":  (2 * 35) + 10 + 10,  # 70 + 10 + 10 = 90 min
+    "Ü40":        (2 * 35) + 10 + 10,
+    "Ü50":        (2 * 35) + 10 + 10,
+}
 
 def load_team_calendars():
 
@@ -156,7 +173,13 @@ def build_calendars(events):
 
             e.begin = start
 
-            e.duration = timedelta(hours=2)
+            team = ev.team_name
+
+            # Standard: 2 Stunden, falls Team nicht gefunden wird
+            duration_minutes = TEAM_DURATIONS.get(team, 120)
+
+            e.duration = timedelta(minutes=duration_minutes)
+
 
             e.location = str(
                 ev.get("LOCATION", "")
