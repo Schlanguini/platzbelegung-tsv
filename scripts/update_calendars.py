@@ -82,27 +82,39 @@ def is_real_match(event):
 
 def is_home_match(event):
 
-    summary = str(
-        event.get("SUMMARY", "")
-    )
+    location = str(
+        event.get("LOCATION", "")
+    ).lower()
 
-    return summary.startswith(HOME_CLUB)
+    home_keywords = [
+        "wentorf",
+        "schönberg",
+        "schoenberg"
+    ]
+
+    return any(
+        keyword in location
+        for keyword in home_keywords
+    )
 
 
 def classify_field(text):
 
     t = text.lower()
 
-    if "schönberg" in t:
+    if "schönberg" in t or "schoenberg" in t:
         return "S1"
 
     if "platz 2" in t:
         return "R1"
 
-    if "rasenplatz" in t:
-        return "R1"
+    if "(kr)" in t:
+        return "KR"
 
-    return "KR"
+    if "kunstrasen" in t:
+        return "KR"
+
+    return "R1"
 
 
 def build_calendars(events):
@@ -129,6 +141,11 @@ def build_calendars(events):
                 str(ev.get("LOCATION", ""))
                 + " "
                 + str(ev.get("DESCRIPTION", ""))
+            )
+
+            print(
+            "SPIELORT:",
+            str(ev.get("LOCATION", ""))
             )
 
             field = classify_field(text)
