@@ -102,11 +102,14 @@ def classify_field(text):
 
     t = text.lower()
 
-    if "schönberg" in t or "schoenberg" in t:
+    if "schönberg platz 1" in t:
         return "S1"
 
-    if "platz 2" in t:
+    if "wentorf platz 2" in t:
         return "R1"
+
+    if "wentorf platz 1" in t:
+        return "KR"
 
     if "(kr)" in t:
         return "KR"
@@ -141,11 +144,6 @@ def build_calendars(events):
                 str(ev.get("LOCATION", ""))
                 + " "
                 + str(ev.get("DESCRIPTION", ""))
-            )
-
-            print(
-            "SPIELORT:",
-            str(ev.get("LOCATION", ""))
             )
 
             field = classify_field(text)
@@ -213,14 +211,6 @@ def main():
     print("===================================\n")
 
     print("DEBUG AUSGABE ERSTE TERMINE\n")
-
-    for event in events[:15]:
-
-        print("TEAM:", getattr(event, "team_name", "unbekannt"))
-        print("SUMMARY:", event.get("SUMMARY"))
-        print("LOCATION:", event.get("LOCATION"))
-        print("DESCRIPTION:", event.get("DESCRIPTION"))
-        print("--------------------------------")
 
     calendars = build_calendars(events)
 
