@@ -1,12 +1,10 @@
+import json
 import requests
-from bs4 import BeautifulSoup
+
 from datetime import datetime, timedelta
 from ics import Calendar, Event
-from urllib.parse import urljoin
-import json
-import re
+from icalendar import Calendar as ICalCalendar
 
-BASE_URL = "https://www.fussball.de/verein/tsv-wentorf-sandesneben-schleswig-holstein/-/id/00ES8GN8JC00006CVV0AG08LVUPGND5I"
 
 FIELDS = {
     "KR": "Kunstrasenplatz, Wentorf Platz 1 (KR), Sparrbucht 4, 23898 Wentorf A.S.",
@@ -15,104 +13,99 @@ FIELDS = {
 }
 
 
-# -----------------------------
-# TEAMS
-# -----------------------------
-def fetch_teams():
-    r = requests.get(BASE_URL, headers={"User-Agent": "Mozilla/5.0"})
-    soup = BeautifulSoup(r.text, "lxml")
-
-    teams = []
-
-    for a in soup.select("a"):
-        href = a.get("href", "")
-
-        if "mannschaft" in href:
-            teams.append(urljoin("https://www.fussball.de", href))
-
-    return list(set(teams))
+HOME_CLUB = "TSV Wentorf"
 
 
-# -----------------------------
-# SPIELE
-# -----------------------------
-def fetch_matches_from_team(team_url):
+def load_team_calendars():
 
-    # Team-ID aus URL extrahieren
-    team_id = team_url.split("team-id/")[-1] if "team-id/" in team_url else None
+    with open("team_calendars.json", encoding="utf-8") as f:
+        calendars = json.load(f)
 
-    if not team_id:
-        return []
+    events = []
 
-    api_url = f"https://www.fussball.de/ajax.teamFixtures/{team_id}"
+    for team_name, url in calendars.items():
 
-    try:
-        r = requests.get(api_url, headers={"User-Agent": "Mozilla/5.0"})
-        data = r.json()
+        url = url.replace("webcal://", "https://")
 
-        matches = []
+        print(f"\nLade Kalender: {team_name}")
 
-        for m in data.get("matches", []):
-            matches.append(m)
+        try:
 
-        return matches
+            response = requests.get(
+                url,
+                timeout=30,
+                headers={"User-Agent": "Mozilla/5.0"}
+            )
 
-    except:
-        return []
+            response.raise_for_status()
 
-# -----------------------------
-# HOME FILTER (robust)
-# -----------------------------
-def is_home_match(match):
+            cal = ICalCalendar.from_ical(response.content)
 
-    try:
-        home = (
-            match.get("homeTeam", {}).get("name")
-            or match.get("home", {}).get("name")
-            or ""
-        ).lower()
+            count = 0
 
-        # robust statt nur "wentorf"
-        return any(x in home for x in ["wentorf", "sg wentorf", "sandesneben"])
+            for component in cal.walk():
 
-    except:
-        return False
+                if component.name == "VEVENT":
+                    component.team_name = team_name
+                    events.append(component)
+                    count += 1
+
+            print(f"Gefundene Termine: {count}")
+
+        except Exception as e:
+            print(f"Fehler bei {team_name}: {e}")
+
+    return events
 
 
-# -----------------------------
-# DATUM PARSEN
-# -----------------------------
-def parse_date(match):
+def is_real_match(event):
 
-    raw = match.get("matchDate") or match.get("date") or ""
+    summary = str(
+        event.get("SUMMARY", "")
+    ).lower()
 
-    if not raw:
-        return None
+    blacklist = [
+        "training",
+        "trainingsbetrieb",
+        "trainer",
+        "veranstaltung",
+        "event",
+        "besprechung",
+        "sitzung",
+        "arbeitseinsatz",
+        "vorstand",
+        "versammlung"
+    ]
 
-    try:
-        return datetime.fromisoformat(raw.replace("Z", ""))
-    except:
-        return None
+    return not any(word in summary for word in blacklist)
 
 
-# -----------------------------
-# PLATZ
-# -----------------------------
+def is_home_match(event):
+
+    summary = str(
+        event.get("SUMMARY", "")
+    )
+
+    return summary.startswith(HOME_CLUB)
+
+
 def classify_field(text):
 
     t = text.lower()
 
     if "schönberg" in t:
         return "S1"
+
     if "platz 2" in t:
         return "R1"
+
+    if "rasenplatz" in t:
+        return "R1"
+
     return "KR"
 
 
-# -----------------------------
-# KALENDER
-# -----------------------------
-def build_calendars(matches):
+def build_calendars(events):
 
     calendars = {
         "KR": Calendar(),
@@ -120,92 +113,111 @@ def build_calendars(matches):
         "S1": Calendar()
     }
 
-    for m in matches:
+    for ev in events:
 
-        if not is_home_match(m):
+        if not is_real_match(ev):
+            continue
+
+        if not is_home_match(ev):
             continue
 
         try:
-            home = (
-                m.get("homeTeam", {}).get("name")
-                or m.get("home", {}).get("name")
-                or "Heimteam"
+
+            start = ev.decoded("DTSTART")
+
+            text = (
+                str(ev.get("LOCATION", ""))
+                + " "
+                + str(ev.get("DESCRIPTION", ""))
             )
 
-            away = (
-                m.get("awayTeam", {}).get("name")
-                or m.get("away", {}).get("name")
-                or "Gast"
-            )
-
-            match_time = parse_date(m)
-            if not match_time:
-                continue
-
-            field = classify_field(home + " " + away)
+            field = classify_field(text)
 
             e = Event()
-            e.name = f"{home} - {away}"
-            e.begin = match_time
-            e.duration = timedelta(minutes=90)
-            e.categories = ["Heimspiel"]
-            e.description = "Heimspiel TSV Wentorf"
+
+            e.name = str(
+                ev.get("SUMMARY", "Heimspiel")
+            )
+
+            e.begin = start
+
+            e.duration = timedelta(hours=2)
+
+            e.location = str(
+                ev.get("LOCATION", "")
+            )
+
+            e.description = str(
+                ev.get("DESCRIPTION", "")
+            )
 
             calendars[field].events.add(e)
 
-        except:
-            continue
+        except Exception as ex:
+            print("Fehler beim Verarbeiten:", ex)
 
     return calendars
 
 
-# -----------------------------
-# SAVE
-# -----------------------------
 def save(calendars):
 
     import os
+
     os.makedirs("output", exist_ok=True)
 
-    with open("output/wentorf_kunstrasen.ics", "w", encoding="utf-8") as f:
+    with open(
+        "output/wentorf_kunstrasen.ics",
+        "w",
+        encoding="utf-8"
+    ) as f:
         f.write(calendars["KR"].serialize())
 
-    with open("output/wentorf_rasen.ics", "w", encoding="utf-8") as f:
+    with open(
+        "output/wentorf_rasen.ics",
+        "w",
+        encoding="utf-8"
+    ) as f:
         f.write(calendars["R1"].serialize())
 
-    with open("output/schoenberg_rasen.ics", "w", encoding="utf-8") as f:
+    with open(
+        "output/schoenberg_rasen.ics",
+        "w",
+        encoding="utf-8"
+    ) as f:
         f.write(calendars["S1"].serialize())
 
 
-# -----------------------------
-# MAIN
-# -----------------------------
 def main():
 
-    team_urls = fetch_teams()
+    events = load_team_calendars()
 
-    print("TEAM URLs gefunden:", len(team_urls))
+    print("\n===================================")
+    print("GESAMT TERMINE:", len(events))
+    print("===================================\n")
 
-    all_matches = []
+    print("DEBUG AUSGABE ERSTE TERMINE\n")
 
-    for url in team_urls:
-        matches = fetch_matches_from_team(url)
+    for event in events[:15]:
 
-        print("URL:", url)
-        print("Matches gefunden:", len(matches))
+        print("TEAM:", getattr(event, "team_name", "unbekannt"))
+        print("SUMMARY:", event.get("SUMMARY"))
+        print("LOCATION:", event.get("LOCATION"))
+        print("DESCRIPTION:", event.get("DESCRIPTION"))
+        print("--------------------------------")
 
-        all_matches.extend(matches)
+    calendars = build_calendars(events)
 
-    print("GESAMT MATCHES:", len(all_matches))
+    total_events = sum(
+        len(cal.events)
+        for cal in calendars.values()
+    )
 
-    if len(all_matches) == 0:
-        print("⚠️ KEINE SPIELE GEFUNDEN - DATENQUELLE LIEFERT LEEREN OUTPUT")
-        return
-
-    calendars = build_calendars(all_matches)
-
-    total_events = sum(len(cal.events) for cal in calendars.values())
-    print("CALENDAR EVENTS:", total_events)
+    print("\n===================================")
+    print("HEIMSPIELE:", total_events)
+    print("KR:", len(calendars["KR"].events))
+    print("R1:", len(calendars["R1"].events))
+    print("S1:", len(calendars["S1"].events))
+    print("===================================\n")
 
     save(calendars)
 
