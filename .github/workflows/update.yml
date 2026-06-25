@@ -3,24 +3,24 @@ name: Update calendars
 on:
   schedule:
     # 04:00 Berlin
-    - cron: "0 2 * * *"   # Sommerzeit (UTC+2)
-    - cron: "0 3 * * *"   # Winterzeit (UTC+1)
+    - cron: "0 2 * * *"   # Sommerzeit
+    - cron: "0 3 * * *"   # Winterzeit
 
     # 12:00 Berlin
-    - cron: "0 10 * * *"  # Sommerzeit
-    - cron: "0 11 * * *"  # Winterzeit
+    - cron: "0 10 * * *"
+    - cron: "0 11 * * *"
 
     # 15:00 Berlin
-    - cron: "0 13 * * *"  # Sommerzeit
-    - cron: "0 14 * * *"  # Winterzeit
+    - cron: "0 13 * * *"
+    - cron: "0 14 * * *"
 
     # 19:00 Berlin
-    - cron: "0 17 * * *"  # Sommerzeit
-    - cron: "0 18 * * *"  # Winterzeit
+    - cron: "0 17 * * *"
+    - cron: "0 18 * * *"
 
     # 21:00 Berlin
-    - cron: "0 19 * * *"  # Sommerzeit
-    - cron: "0 20 * * *"  # Winterzeit
+    - cron: "0 19 * * *"
+    - cron: "0 20 * * *"
 
   workflow_dispatch:
 
