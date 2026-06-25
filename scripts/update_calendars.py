@@ -20,7 +20,8 @@ TEAM_DURATIONS = {
     "F-Junioren": 180,
 
     "E-Junioren": (2 * 25) + 10 + 15,
-    "D-Junioren": (2 * 30) + 10 + 15,
+    "D2-Junioren": (2 * 30) + 10 + 15,
+    "D1-Junioren": (2 * 30) + 10 + 15,
     "C-Junioren": (2 * 35) + 15 + 15,
     "B-Junioren": (2 * 40) + 15 + 15,
     "A-Junioren": (2 * 45) + 15 + 15,
