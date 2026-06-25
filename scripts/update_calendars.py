@@ -12,8 +12,14 @@ from icalendar import Calendar as ICalCalendar
 # -------------------------------------------------------
 
 TEAM_DURATION_RULES = [
+    (r"^g[- ]?jugend$", 180),
     (r"^g[- ]?junioren$", 180),
     (r"^f[- ]?junioren$", 180),
+
+    (r"^d\d*[- ]?juniorinnen$", 85),
+    (r"^c\d*[- ]?juniorinnen$", 95),
+    (r"^b\d*[- ]?juniorinnen$", 100),
+    (r"^a\d*[- ]?juniorinnen$", 105),
 
     (r"^e\d*[- ]?junioren$", 75),
     (r"^d\d*[- ]?junioren$", 85),
