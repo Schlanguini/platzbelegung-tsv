@@ -1,38 +1,46 @@
 import json
 import requests
+import re
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from ics import Calendar, Event
 from icalendar import Calendar as ICalCalendar
 
 
-FIELDS = {
-    "KR": "Kunstrasenplatz, Wentorf Platz 1 (KR), Sparrbucht 4, 23898 Wentorf A.S.",
-    "R1": "Rasenplatz, Wentorf Platz 2, Sparrbucht 4, 23898 Wentorf A.S.",
-    "S1": "Rasenplatz, Schönberg Platz 1, Jägerstr. 5, 22929 Schönberg"
-}
+# -------------------------------------------------------
+# Teamdauer-Regeln (automatische Erkennung)
+# -------------------------------------------------------
 
-HOME_CLUB = "TSV Wentorf"
+TEAM_DURATION_RULES = [
+    (r"^g[- ]?junioren$", 180),
+    (r"^f[- ]?junioren$", 180),
 
-# Spielzeiten pro Mannschaft (in Minuten)
-TEAM_DURATIONS = {
-    "G-Junioren": 180,
-    "F-Junioren": 180,
+    (r"^e\d*[- ]?junioren$", 75),
+    (r"^d\d*[- ]?junioren$", 85),
+    (r"^c\d*[- ]?junioren$", 95),
+    (r"^b\d*[- ]?junioren$", 100),
+    (r"^a\d*[- ]?junioren$", 105),
 
-    "E-Junioren": (2 * 25) + 10 + 15,
-    "D2-Junioren": (2 * 30) + 10 + 15,
-    "D1-Junioren": (2 * 30) + 10 + 15,
-    "C-Junioren": (2 * 35) + 15 + 15,
-    "B-Junioren": (2 * 40) + 15 + 15,
-    "A-Junioren": (2 * 45) + 15 + 15,
+    (r"^\d*\.?\s*herren$", 105),   # Herren, 1. Herren, 2. Herren, 3. Herren
+    (r"^altherren$", 80),
+    (r"^ü40$", 80),
+    (r"^ü50$", 80),
+]
 
-    "Herren":     (2 * 45) + 15 + 15,
 
-    "Altherren":  (2 * 35) + 10 + 10,
-    "Ü40":        (2 * 35) + 10 + 10,
-    "Ü50":        (2 * 35) + 10 + 10,
-}
+def get_team_duration(team_name: str) -> int:
+    name = team_name.lower().strip()
 
+    for pattern, duration in TEAM_DURATION_RULES:
+        if re.match(pattern, name):
+            return duration
+
+    return 120  # Fallback
+
+
+# -------------------------------------------------------
+# Laden der Teamkalender
+# -------------------------------------------------------
 
 def load_team_calendars():
 
@@ -74,6 +82,10 @@ def load_team_calendars():
     return events
 
 
+# -------------------------------------------------------
+# Filterfunktionen
+# -------------------------------------------------------
+
 def is_real_match(event):
 
     summary = str(event.get("SUMMARY", "")).lower()
@@ -107,6 +119,10 @@ def is_home_match(event):
     return any(keyword in location for keyword in home_keywords)
 
 
+# -------------------------------------------------------
+# Platzlogik
+# -------------------------------------------------------
+
 def classify_field(text):
 
     t = text.lower()
@@ -129,7 +145,9 @@ def classify_field(text):
     return "R1"
 
 
-from datetime import datetime, timedelta, timezone
+# -------------------------------------------------------
+# Kalender erzeugen
+# -------------------------------------------------------
 
 def build_calendars(events):
 
@@ -176,6 +194,7 @@ def build_calendars(events):
 
             summary = str(ev.get("SUMMARY", ""))
 
+            # DFBnet-Format: "<Gast> - <Heim>"
             if "-" in summary:
                 guest, home = summary.split("-", 1)
                 guest = guest.strip()
@@ -185,7 +204,8 @@ def build_calendars(events):
             e.name = f"({team}) {HOME_TEAM_NAME} - {guest}"
             e.begin = start
 
-            duration_minutes = TEAM_DURATIONS.get(team, 120)
+            # Dauer anhand Mustererkennung
+            duration_minutes = get_team_duration(team)
             e.duration = timedelta(minutes=duration_minutes)
 
             e.location = str(ev.get("LOCATION", ""))
@@ -199,6 +219,9 @@ def build_calendars(events):
     return calendars
 
 
+# -------------------------------------------------------
+# Speichern der ICS-Dateien
+# -------------------------------------------------------
 
 def save(calendars):
 
@@ -216,7 +239,7 @@ def save(calendars):
 
 
 # -------------------------------------------------------
-# Ablauf starten (kein main vorhanden)
+# Ablauf starten (kein main)
 # -------------------------------------------------------
 
 events = load_team_calendars()
@@ -227,7 +250,7 @@ print("===================================\n")
 
 calendars = build_calendars(events)
 
-# Kalenderstatistik ausgeben
+# Kalenderstatistik
 print("\n===================================")
 print("KALENDERSTATISTIK")
 print("===================================\n")
