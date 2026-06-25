@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - "output/**"
-      - "_headers"
 
   workflow_dispatch:
 
@@ -22,15 +21,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: ./
+          path: ./output
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v5
