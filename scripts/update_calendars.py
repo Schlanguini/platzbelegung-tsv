@@ -128,6 +128,8 @@ def classify_field(text):
     return "R1"
 
 
+from datetime import datetime, timedelta, timezone
+
 def build_calendars(events):
 
     calendars = {
@@ -147,8 +149,14 @@ def build_calendars(events):
         try:
             start = ev.decoded("DTSTART")
 
+            # Zeitzonen vereinheitlichen
+            if start.tzinfo is None:
+                start = start.replace(tzinfo=timezone.utc)
+            else:
+                start = start.astimezone(timezone.utc)
+
             # Filter: nur +- 1 Jahr
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             one_year = timedelta(days=365)
             if not (now - one_year <= start <= now + one_year):
                 continue
@@ -162,28 +170,20 @@ def build_calendars(events):
 
             e = Event()
 
-            # Mannschaftstyp (z. B. "D2-Junioren")
             team = ev.team_name
-
-            # Heimverein immer fix
             HOME_TEAM_NAME = "SGWSS"
 
-            # Gegner aus SUMMARY extrahieren
             summary = str(ev.get("SUMMARY", ""))
 
-            # DFBnet-Format: "<Gast> - <Heim>"
             if "-" in summary:
                 guest, home = summary.split("-", 1)
                 guest = guest.strip()
             else:
                 guest = summary.strip()
 
-            # Titel setzen: (Team) SGWSS - Gast
             e.name = f"({team}) {HOME_TEAM_NAME} - {guest}"
-
             e.begin = start
 
-            # Dauer anhand TEAM_DURATIONS
             duration_minutes = TEAM_DURATIONS.get(team, 120)
             e.duration = timedelta(minutes=duration_minutes)
 
@@ -196,6 +196,7 @@ def build_calendars(events):
             print("Fehler beim Verarbeiten:", ex)
 
     return calendars
+
 
 
 def save(calendars):
