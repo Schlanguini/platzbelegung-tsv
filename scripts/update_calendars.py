@@ -45,6 +45,38 @@ def get_team_duration(team_name: str) -> int:
 
 
 # -------------------------------------------------------
+# Gegner-Erkennung (NEU)
+# -------------------------------------------------------
+
+def extract_opponent(summary: str, home_team="SGWSS") -> str:
+    """
+    Extrahiert den Gegner aus dem SUMMARY.
+    Entfernt Klammern, ignoriert SGWSS als Gegner.
+    """
+
+    # Klammern entfernen: (1. Herren), (Herren), etc.
+    clean = re.sub(r"\([^)]*\)", "", summary).strip()
+
+    # Split am ersten " - "
+    if " - " not in clean:
+        return "Gegner unbekannt"
+
+    left, right = clean.split(" - ", 1)
+    left = left.strip()
+    right = right.strip()
+
+    # SGWSS darf niemals Gegner sein
+    if left == home_team and right != home_team:
+        return right
+
+    if right == home_team and left != home_team:
+        return left
+
+    # Wenn beide SGWSS → Gegner fehlt im ICS
+    return "Gegner unbekannt"
+
+
+# -------------------------------------------------------
 # Laden der Teamkalender
 # -------------------------------------------------------
 
@@ -143,7 +175,7 @@ def is_training(ev):
 
 
 # -------------------------------------------------------
-# Platzlogik für SPIELE (unverändert)
+# Platzlogik für SPIELE
 # -------------------------------------------------------
 
 def classify_field_match(text):
@@ -169,7 +201,7 @@ def classify_field_match(text):
 
 
 # -------------------------------------------------------
-# Platzlogik für TRAINING (NEU + VALIDIERUNG)
+# Platzlogik für TRAINING
 # -------------------------------------------------------
 
 def classify_field_training(text):
@@ -185,7 +217,6 @@ def classify_field_training(text):
     if "wentorf p2" in t:
         return "R1"
 
-    # ❗ Training ohne gültige Platzangabe → ignorieren
     return None
 
 
@@ -206,11 +237,9 @@ def build_calendars(events):
         training = is_training(ev)
         match = is_real_match(ev)
 
-        # Wenn weder Training noch Spiel → ignorieren
         if not training and not match:
             continue
 
-        # Heimspiel-Filter nur für Spiele
         if match and not is_home_match(ev):
             continue
 
@@ -229,11 +258,9 @@ def build_calendars(events):
 
             location = str(ev.get("LOCATION", ""))
 
-            # SPIEL oder TRAINING → unterschiedliche Platzlogik
             if training:
                 field = classify_field_training(location)
                 if field is None:
-                    # ❗ Training ohne gültige Platzangabe → überspringen
                     continue
             else:
                 field = classify_field_match(location)
@@ -246,27 +273,20 @@ def build_calendars(events):
             team = ev.team_name
 
             if training:
-                # Trainingstitel
                 e.name = f"({team}) Training"
 
-                # Trainingsdauer direkt aus ICS übernehmen
                 try:
                     e.duration = ev.decoded("DURATION")
                 except:
                     e.duration = timedelta(minutes=90)
 
             else:
-                # SPIEL
                 HOME_TEAM_NAME = "SGWSS"
                 summary = str(ev.get("SUMMARY", ""))
 
-                if " - " in summary:
-                    left, guest = summary.split(" - ", 1)
-                    guest = guest.strip()
-                else:
-                    guest = summary.strip()
+                opponent = extract_opponent(summary, HOME_TEAM_NAME)
 
-                e.name = f"({team}) {HOME_TEAM_NAME} - {guest}"
+                e.name = f"({team}) {HOME_TEAM_NAME} - {opponent}"
 
                 duration_minutes = get_team_duration(team)
                 e.duration = timedelta(minutes=duration_minutes)
