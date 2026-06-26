@@ -143,10 +143,10 @@ def is_training(ev):
 
 
 # -------------------------------------------------------
-# Platzlogik
+# Platzlogik für SPIELE (unverändert)
 # -------------------------------------------------------
 
-def classify_field(text):
+def classify_field_match(text):
 
     t = text.lower()
 
@@ -164,6 +164,26 @@ def classify_field(text):
 
     if "kunstrasen" in t:
         return "KR"
+
+    return "R1"
+
+
+# -------------------------------------------------------
+# Platzlogik für TRAINING (NEU)
+# -------------------------------------------------------
+
+def classify_field_training(text):
+
+    t = text.lower()
+
+    if "schönberg p1" in t:
+        return "S1"
+
+    if "wentorf p1" in t:
+        return "KR"
+
+    if "wentorf p2" in t:
+        return "R1"
 
     return "R1"
 
@@ -207,7 +227,12 @@ def build_calendars(events):
                 continue
 
             location = str(ev.get("LOCATION", ""))
-            field = classify_field(location)
+
+            # SPIEL oder TRAINING → unterschiedliche Platzlogik
+            if training:
+                field = classify_field_training(location)
+            else:
+                field = classify_field_match(location)
 
             e = Event()
             e.begin = start
