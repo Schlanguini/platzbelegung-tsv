@@ -5,21 +5,21 @@ BEGIN:VEVENT
 DURATION:PT1H45M
 LOCATION:Schönberg Platz 1\,\nJägerstr. 5\, 22929 Schönberg
 DTSTART:20260712T093000Z
-SUMMARY:(2. Herren) SGWSS - SG Bargteheide-Hammoor
-UID:579c7444-f170-427d-a912-c16171ab8e4d@579c.org
+SUMMARY:(2. Herren) SGWSS - SG Wentorf-Sandesneben/Schönberg II (Herren)
+UID:aab8f87e-72d5-47c5-bd0b-7c27e0e491e6@aab8.org
 END:VEVENT
 BEGIN:VEVENT
 DURATION:PT1H45M
 LOCATION:Schönberg Platz 1\,\nJägerstr. 5\, 22929 Schönberg
 DTSTART:20260719T100000Z
-SUMMARY:(2. Herren) SGWSS - SV Grün-Weiß Siebenbäumen II
-UID:07f622b0-91ea-48f2-8fa0-4a95d3fb49bf@07f6.org
+SUMMARY:(2. Herren) SGWSS - SG Wentorf-Sandesneben/Schönberg II (Herren)
+UID:9a850298-bfff-4291-b9c1-632d7e8cfb4a@9a85.org
 END:VEVENT
 BEGIN:VEVENT
 DURATION:PT1H45M
 LOCATION:Schönberg Platz 1\,\nJägerstr. 5\, 22929 Schönberg
 DTSTART:20260703T173000Z
-SUMMARY:(2. Herren) SGWSS - SG Todendorf-Eichede
-UID:939e4ca5-390b-4786-bf84-e92467aca600@939e.org
+SUMMARY:(2. Herren) SGWSS - SG Wentorf-Sandesneben/Schönberg II (Herren)
+UID:62d773f0-2bef-407b-99a7-e091ca8591ce@62d7.org
 END:VEVENT
 END:VCALENDAR
