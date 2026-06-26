@@ -5,7 +5,7 @@ BEGIN:VEVENT
 DURATION:PT1H45M
 LOCATION:Wentorf Platz 2\,\nSparrbucht 4\, 23898 Wentorf A.S.
 DTSTART:20260726T120000Z
-SUMMARY:(1. Herren) SGWSS - SG Wentorf-Sandesneben/Schönberg (Herren)
-UID:d8757e5c-b1e4-4993-8a2f-b3c7ece00cfe@d875.org
+SUMMARY:(1. Herren) SGWSS - SGWSS (1. Herren) (Herren)
+UID:2fed8d92-6ad0-4772-82ff-97975df212b3@2fed.org
 END:VEVENT
 END:VCALENDAR
