@@ -4,22 +4,22 @@ PRODID:ics.py - http://git.io/lLljaA
 BEGIN:VEVENT
 DURATION:PT1H45M
 LOCATION:Schönberg Platz 1\,\nJägerstr. 5\, 22929 Schönberg
+DTSTART:20260703T173000Z
+SUMMARY:(2. Herren) SGWSS - SG Wentorf-Sandesneben/Schönberg II (Herren)
+UID:71911bec-3ea3-4cde-abbf-2390d48626de@7191.org
+END:VEVENT
+BEGIN:VEVENT
+DURATION:PT1H45M
+LOCATION:Schönberg Platz 1\,\nJägerstr. 5\, 22929 Schönberg
 DTSTART:20260712T093000Z
 SUMMARY:(2. Herren) SGWSS - SG Wentorf-Sandesneben/Schönberg II (Herren)
-UID:aab8f87e-72d5-47c5-bd0b-7c27e0e491e6@aab8.org
+UID:b3b0ecc6-569a-4b10-b7a2-85fed874913c@b3b0.org
 END:VEVENT
 BEGIN:VEVENT
 DURATION:PT1H45M
 LOCATION:Schönberg Platz 1\,\nJägerstr. 5\, 22929 Schönberg
 DTSTART:20260719T100000Z
 SUMMARY:(2. Herren) SGWSS - SG Wentorf-Sandesneben/Schönberg II (Herren)
-UID:9a850298-bfff-4291-b9c1-632d7e8cfb4a@9a85.org
-END:VEVENT
-BEGIN:VEVENT
-DURATION:PT1H45M
-LOCATION:Schönberg Platz 1\,\nJägerstr. 5\, 22929 Schönberg
-DTSTART:20260703T173000Z
-SUMMARY:(2. Herren) SGWSS - SG Wentorf-Sandesneben/Schönberg II (Herren)
-UID:62d773f0-2bef-407b-99a7-e091ca8591ce@62d7.org
+UID:0367b811-3bae-44c6-a6bf-d4136c13797a@0367.org
 END:VEVENT
 END:VCALENDAR
