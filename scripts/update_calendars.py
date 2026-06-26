@@ -110,7 +110,7 @@ def is_real_match(event):
         "abend",
         "elternabend",
         "feier",
-        "abschluss
+        "abschluss"
     ]
 
     return not any(word in summary for word in blacklist)
