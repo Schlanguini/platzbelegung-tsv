@@ -169,7 +169,7 @@ def classify_field_match(text):
 
 
 # -------------------------------------------------------
-# Platzlogik für TRAINING (NEU)
+# Platzlogik für TRAINING (NEU + VALIDIERUNG)
 # -------------------------------------------------------
 
 def classify_field_training(text):
@@ -185,7 +185,8 @@ def classify_field_training(text):
     if "wentorf p2" in t:
         return "R1"
 
-    return "R1"
+    # ❗ Training ohne gültige Platzangabe → ignorieren
+    return None
 
 
 # -------------------------------------------------------
@@ -231,6 +232,9 @@ def build_calendars(events):
             # SPIEL oder TRAINING → unterschiedliche Platzlogik
             if training:
                 field = classify_field_training(location)
+                if field is None:
+                    # ❗ Training ohne gültige Platzangabe → überspringen
+                    continue
             else:
                 field = classify_field_match(location)
 
