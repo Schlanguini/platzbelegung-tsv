@@ -27,7 +27,7 @@ TEAM_DURATION_RULES = [
     (r"^b\d*[- ]?junioren$", 100),
     (r"^a\d*[- ]?junioren$", 105),
 
-    (r"^\d*\.?\s*herren$", 105),   # Herren, 1. Herren, 2. Herren, 3. Herren
+    (r"^\d*\.?\s*herren$", 105),
     (r"^altherren$", 80),
     (r"^ü40$", 80),
     (r"^ü50$", 80),
@@ -130,6 +130,19 @@ def is_home_match(event):
 
 
 # -------------------------------------------------------
+# Trainingserkennung
+# -------------------------------------------------------
+
+def is_training(ev):
+    summary = str(ev.get("SUMMARY", "")).lower()
+    description = str(ev.get("DESCRIPTION", "")).lower()
+
+    keywords = ["training", "trainings", "übungseinheit", "tr "]
+
+    return any(k in summary for k in keywords) or any(k in description for k in keywords)
+
+
+# -------------------------------------------------------
 # Platzlogik
 # -------------------------------------------------------
 
@@ -156,7 +169,7 @@ def classify_field(text):
 
 
 # -------------------------------------------------------
-# Kalender erzeugen
+# Kalender erzeugen (Spiele + Training)
 # -------------------------------------------------------
 
 def build_calendars(events):
@@ -169,57 +182,65 @@ def build_calendars(events):
 
     for ev in events:
 
-        if not is_real_match(ev):
+        training = is_training(ev)
+        match = is_real_match(ev)
+
+        # Wenn weder Training noch Spiel → ignorieren
+        if not training and not match:
             continue
 
-        if not is_home_match(ev):
+        # Heimspiel-Filter nur für Spiele
+        if match and not is_home_match(ev):
             continue
 
         try:
             start = ev.decoded("DTSTART")
 
-            # Zeitzonen vereinheitlichen
             if start.tzinfo is None:
                 start = start.replace(tzinfo=timezone.utc)
             else:
                 start = start.astimezone(timezone.utc)
 
-            # Filter: nur +- 1 Jahr
             now = datetime.now(timezone.utc)
             one_year = timedelta(days=365)
             if not (now - one_year <= start <= now + one_year):
                 continue
 
-            text = (
-                str(ev.get("LOCATION", "")) + " " +
-                str(ev.get("DESCRIPTION", ""))
-            )
-
-            field = classify_field(text)
+            location = str(ev.get("LOCATION", ""))
+            field = classify_field(location)
 
             e = Event()
+            e.begin = start
+            e.location = location
+            e.description = str(ev.get("DESCRIPTION", ""))
 
             team = ev.team_name
-            HOME_TEAM_NAME = "SGWSS"
 
-            summary = str(ev.get("SUMMARY", ""))
+            if training:
+                # Trainingstitel
+                e.name = f"({team}) Training"
 
-            # DFBnet-Format: "<Gast> - <Heim>"
-            if " - " in summary:
-                guest, home = summary.split(" - ", 1)
-                guest = guest.strip()
+                # Trainingsdauer direkt aus ICS übernehmen
+                try:
+                    e.duration = ev.decoded("DURATION")
+                except:
+                    e.duration = timedelta(minutes=90)
+
             else:
-                guest = summary.strip()
+                # SPIEL
+                HOME_TEAM_NAME = "SGWSS"
+                summary = str(ev.get("SUMMARY", ""))
 
-            e.name = f"({team}) {HOME_TEAM_NAME} - {guest}"
-            e.begin = start
+                if " - " in summary:
+                    left, guest = summary.split(" - ", 1)
+                    guest = guest.strip()
+                else:
+                    guest = summary.strip()
 
-            # Dauer anhand Mustererkennung
-            duration_minutes = get_team_duration(team)
-            e.duration = timedelta(minutes=duration_minutes)
+                e.name = f"({team}) {HOME_TEAM_NAME} - {guest}"
 
-            e.location = str(ev.get("LOCATION", ""))
-            e.description = str(ev.get("DESCRIPTION", ""))
+                duration_minutes = get_team_duration(team)
+                e.duration = timedelta(minutes=duration_minutes)
 
             calendars[field].events.add(e)
 
@@ -249,7 +270,7 @@ def save(calendars):
 
 
 # -------------------------------------------------------
-# Ablauf starten (kein main)
+# Ablauf starten
 # -------------------------------------------------------
 
 events = load_team_calendars()
@@ -260,7 +281,6 @@ print("===================================\n")
 
 calendars = build_calendars(events)
 
-# Kalenderstatistik
 print("\n===================================")
 print("KALENDERSTATISTIK")
 print("===================================\n")
@@ -271,7 +291,7 @@ for field, cal in calendars.items():
 total_events = sum(len(cal.events) for cal in calendars.values())
 
 print("\n===================================")
-print("HEIMSPIELE GESAMT:", total_events)
+print("HEIMSPIELE + TRAINING GESAMT:", total_events)
 print("KR:", len(calendars['KR'].events))
 print("R1:", len(calendars['R1'].events))
 print("S1:", len(calendars['S1'].events))
