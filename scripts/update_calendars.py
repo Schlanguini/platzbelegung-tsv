@@ -106,7 +106,11 @@ def is_real_match(event):
         "sitzung",
         "arbeitseinsatz",
         "vorstand",
-        "versammlung"
+        "versammlung",
+        "abend",
+        "elternabend",
+        "feier",
+        "abschluss
     ]
 
     return not any(word in summary for word in blacklist)
@@ -201,8 +205,8 @@ def build_calendars(events):
             summary = str(ev.get("SUMMARY", ""))
 
             # DFBnet-Format: "<Gast> - <Heim>"
-            if "-" in summary:
-                guest, home = summary.split("-", 1)
+            if " - " in summary:
+                guest, home = summary.split(" - ", 1)
                 guest = guest.strip()
             else:
                 guest = summary.strip()
